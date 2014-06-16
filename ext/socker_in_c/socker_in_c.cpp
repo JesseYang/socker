@@ -67,9 +67,11 @@ static VALUE object_send_request(VALUE rb_self, VALUE remote_ip, VALUE port, VAL
 static VALUE object_start_server(VALUE rb_self, VALUE port) {
 
 	int port_int = NUM2INT(port);
-	int socket_desc, new_socket, c;
+	int socket_desc, new_socket, c, recv_byte_num;
 	struct sockaddr_in server, client;
-	char *message;
+	char message[2000];
+	VALUE ip, content;
+	ID cb_method = rb_intern("recv_cb");
 
 	// create a socket
 	socket_desc = socket(AF_INET, SOCK_STREAM, 0);
@@ -96,17 +98,26 @@ static VALUE object_start_server(VALUE rb_self, VALUE port) {
 	// accept any incoming connection
 	cout << "waiting for incoming connections..." << endl;
 	c = sizeof(struct sockaddr_in);
-	new_socket = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c);
-	if (new_socket < 0)
+
+	while ( (new_socket = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c)) )
 	{
-		cout << "accept failed" << endl;
+		if (new_socket < 0)
+		{
+			cout << "accept failed" << endl;
+			break;
+		}
+		cout << "connection accepted" << endl;
+
+		string ip = inet_ntoa(client.sin_addr);
+		recv_byte_num = recv(new_socket, message, 2000, 0);
+
+		// rb_str_new(ip);
+		content = rb_str_new(message, recv_byte_num);
+
+		rb_funcall(rb_self, cb_method, 2, rb_str_new(ip.c_str(), ip.length()), content);
+
+		close(new_socket);
 	}
-
-	cout << "connection accepted" << endl;
-
-	// reply to the client
-	message = "Hello Client , I have received your connection. But I have to go now, bye\n";
-	write(new_socket , message , strlen(message));
 
 	return 0;
 }

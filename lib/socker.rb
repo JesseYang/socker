@@ -22,6 +22,13 @@ module Socker
     Test.say_hi
   end
 
+  def self.recv_cb(ip, content)
+    Deivce.recv_loc_info(ip, content)
+    puts ip.inspect
+    puts content.inspect
+    puts "---------------------------------------------------"
+  end
+
   def self.loc_info_recvd(content)
     
   end
